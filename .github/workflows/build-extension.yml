@@ -1,0 +1,73 @@
+name: Build Chrome Extension
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'extensions/azure-appinsights-guid-navigator/**'
+      - '.github/workflows/build-extension.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'extensions/azure-appinsights-guid-navigator/**'
+      - '.github/workflows/build-extension.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    
+    - name: Install dependencies
+      run: |
+        cd extensions/azure-appinsights-guid-navigator
+        npm init -y
+        npm install --save-dev puppeteer
+    
+    - name: Generate icons
+      run: |
+        cd extensions/azure-appinsights-guid-navigator
+        node ../../scripts/generate-icons.js
+    
+    - name: Create ZIP package
+      run: |
+        cd extensions/azure-appinsights-guid-navigator
+        # Remove development files
+        rm -f generate-icons.html
+        rm -f package.json package-lock.json
+        rm -rf node_modules
+        # Create zip
+        zip -r ../../azure-appinsights-guid-navigator.zip . -x "*.DS_Store" "*.git*"
+    
+    - name: Create unpacked artifact
+      run: |
+        cd extensions
+        tar -czf ../azure-appinsights-guid-navigator-unpacked.tar.gz azure-appinsights-guid-navigator
+    
+    - name: Upload ZIP artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: chrome-extension-zip
+        path: azure-appinsights-guid-navigator.zip
+        retention-days: 30
+    
+    - name: Upload unpacked artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: chrome-extension-unpacked
+        path: azure-appinsights-guid-navigator-unpacked.tar.gz
+        retention-days: 30
+    
+    - name: Upload source artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: chrome-extension-source
+        path: extensions/azure-appinsights-guid-navigator/
+        retention-days: 30

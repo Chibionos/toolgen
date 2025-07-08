@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Azure AppInsights GUID Navigator</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <h2>AppInsights GUID Navigator</h2>
+    
+    <div class="status-section">
+      <div class="status-item">
+        <span class="status-label">Status:</span>
+        <span id="status" class="status-value active">Active</span>
+      </div>
+    </div>
+
+    <div class="info-section">
+      <p class="instructions">Select any GUID/operation_id on the page to navigate to Transaction search.</p>
+      
+      <div id="recent-selection" class="recent-section" style="display: none;">
+        <h3>Recent Selection</h3>
+        <div class="guid-display">
+          <span id="selected-guid" class="guid-text"></span>
+          <button id="copy-guid" class="copy-btn" title="Copy GUID">📋</button>
+        </div>
+        <button id="navigate-btn" class="navigate-btn">Go to Transaction Search</button>
+      </div>
+    </div>
+
+    <div class="history-section">
+      <h3>Recent GUIDs</h3>
+      <ul id="guid-history" class="guid-list"></ul>
+    </div>
+
+    <div class="footer">
+      <button id="clear-history" class="clear-btn">Clear History</button>
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>

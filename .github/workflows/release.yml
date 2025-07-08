@@ -1,0 +1,117 @@
+name: Release Chrome Extension
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    
+    - name: Install dependencies
+      run: |
+        cd extensions/azure-appinsights-guid-navigator
+        npm init -y
+        npm install --save-dev puppeteer
+    
+    - name: Generate icons
+      run: |
+        cd extensions/azure-appinsights-guid-navigator
+        node ../../scripts/generate-icons.js
+    
+    - name: Update version in manifest
+      run: |
+        VERSION=${{ github.event.inputs.version || github.ref_name }}
+        VERSION=${VERSION#v}  # Remove 'v' prefix if present
+        cd extensions/azure-appinsights-guid-navigator
+        # Update manifest.json with the version
+        sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" manifest.json
+    
+    - name: Create Chrome Web Store package
+      run: |
+        cd extensions/azure-appinsights-guid-navigator
+        # Remove development files
+        rm -f generate-icons.html
+        rm -f package.json package-lock.json
+        rm -rf node_modules
+        # Create zip for Chrome Web Store
+        zip -r ../../azure-appinsights-guid-navigator-chrome.zip . -x "*.DS_Store" "*.git*" "README.md"
+    
+    - name: Create source package
+      run: |
+        cd extensions
+        tar -czf ../azure-appinsights-guid-navigator-source.tar.gz azure-appinsights-guid-navigator
+    
+    - name: Create release notes
+      id: release_notes
+      run: |
+        VERSION=${{ github.event.inputs.version || github.ref_name }}
+        VERSION=${VERSION#v}
+        
+        # Extract release notes from CHANGELOG.md if exists
+        if [ -f "CHANGELOG.md" ]; then
+          NOTES=$(awk "/## \[$VERSION\]/{flag=1; next} /## \[/{flag=0} flag" CHANGELOG.md)
+        else
+          NOTES="Release $VERSION"
+        fi
+        
+        # Write to file for GitHub release
+        cat > release_notes.md << EOF
+        ## Azure AppInsights GUID Navigator v$VERSION
+        
+        Chrome extension for easy navigation from Azure Application Insights Logs to Transaction search.
+        
+        ### Installation Instructions
+        
+        #### Method 1: Chrome Web Store Package (Recommended)
+        1. Download \`azure-appinsights-guid-navigator-chrome.zip\`
+        2. Open Chrome and navigate to \`chrome://extensions/\`
+        3. Enable "Developer mode"
+        4. Drag and drop the ZIP file onto the extensions page
+        
+        #### Method 2: Manual Installation
+        1. Download \`azure-appinsights-guid-navigator-source.tar.gz\`
+        2. Extract the archive
+        3. Open Chrome and navigate to \`chrome://extensions/\`
+        4. Enable "Developer mode"
+        5. Click "Load unpacked" and select the extracted folder
+        
+        ### What's New
+        $NOTES
+        
+        ### Features
+        - Select any GUID/operation_id to navigate to transaction search
+        - Double-click for instant navigation
+        - Right-click context menu support
+        - History tracking of recent GUIDs
+        - Visual feedback with tooltips
+        
+        EOF
+    
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        name: Azure AppInsights GUID Navigator ${{ github.event.inputs.version || github.ref_name }}
+        body_path: release_notes.md
+        draft: false
+        prerelease: false
+        files: |
+          azure-appinsights-guid-navigator-chrome.zip
+          azure-appinsights-guid-navigator-source.tar.gz
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

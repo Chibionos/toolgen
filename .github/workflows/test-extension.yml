@@ -1,0 +1,52 @@
+name: Test Extension Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    
+    - name: Install dependencies
+      run: |
+        cd extensions/azure-appinsights-guid-navigator
+        npm init -y
+        npm install --save-dev puppeteer
+    
+    - name: Generate icons
+      run: |
+        cd extensions/azure-appinsights-guid-navigator
+        node ../../scripts/generate-icons.js
+    
+    - name: List generated files
+      run: |
+        echo "=== Extension files ==="
+        ls -la extensions/azure-appinsights-guid-navigator/
+        echo "=== Icon files ==="
+        ls -la extensions/azure-appinsights-guid-navigator/*.png || echo "No PNG files found"
+    
+    - name: Validate manifest.json
+      run: |
+        cd extensions/azure-appinsights-guid-navigator
+        cat manifest.json | jq '.' > /dev/null && echo "manifest.json is valid JSON"
+    
+    - name: Create test package
+      run: |
+        cd extensions/azure-appinsights-guid-navigator
+        zip -r ../../test-package.zip . -x "*.DS_Store" "*.git*"
+        echo "Package created: $(du -h ../../test-package.zip)"
+    
+    - name: Upload test package
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-extension-package
+        path: test-package.zip
+        retention-days: 1
